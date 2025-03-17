@@ -1,0 +1,21 @@
+Metadata-Version: 2.1
+Name: ptdec
+Version: 1.0
+Summary: PyTorch implementation of DEC.
+Home-page: https://github.com/vlukiyanov/pt-dec/
+Download-URL: 
+Author: Vladimir Lukiyanov
+Author-email: vladimir.lukiyanov@me.com
+License: MIT
+License-File: LICENSE
+Requires-Dist: numpy>=1.13.3
+Requires-Dist: torch>=0.4.0
+Requires-Dist: scipy>=1.0.0
+Requires-Dist: pandas>=0.21.0
+Requires-Dist: visdom>=0.1.05
+Requires-Dist: click>=6.7
+Requires-Dist: xlrd>=1.0.0
+Requires-Dist: cytoolz>=0.9.0.1
+Requires-Dist: tqdm>=4.11.2
+Requires-Dist: scikit-learn>=0.19.1
+Requires-Dist: ptsdae>=1.0.0
