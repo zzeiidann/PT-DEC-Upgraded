@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
+from tqdm.rich import tqdm
 
 from ptsdae.dae import DenoisingAutoencoder
 from ptsdae.sdae import StackedDenoisingAutoEncoder
