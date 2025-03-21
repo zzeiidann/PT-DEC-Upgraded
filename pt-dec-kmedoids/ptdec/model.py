@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data.dataloader import DataLoader, default_collate
 from typing import Tuple, Callable, Optional, Union
-from tqdm import tqdm
+from tqdm.rich import tqdm
 
 from ptdec.utils import target_distribution, cluster_accuracy
 
