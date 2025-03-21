@@ -72,7 +72,7 @@ def train(
         },
         disable=silent,
     )
-    kmeans = KMedoids(n_clusters=model.cluster_number, method="pam")
+    kmedoids = KMedoids(n_clusters=model.cluster_number, method="pam")
     model.train()
     features = []
     actual = []
@@ -85,11 +85,11 @@ def train(
             batch = batch.cuda(non_blocking=True)
         features.append(model.encoder(batch).detach().cpu())
     actual = torch.cat(actual).long()
-    predicted = kmeans.fit_predict(torch.cat(features).numpy())
+    predicted = kmedoids.fit_predict(torch.cat(features).numpy())
     predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
     _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
     cluster_centers = torch.tensor(
-        kmeans.cluster_centers_, dtype=torch.float, requires_grad=True
+        kmedoids.cluster_centers_, dtype=torch.float, requires_grad=True
     )
     if cuda:
         cluster_centers = cluster_centers.cuda(non_blocking=True)
