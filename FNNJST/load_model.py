@@ -4,7 +4,7 @@ import os
 import sys
 
 # Import the model - Consider restructuring to avoid this sys.path.append
-from FNNJST import FNNJST, create_model
+from .model import FNNJST, create_model
 
 def load_model(model_path, texts=None, labels=None, bert_model="indolem/indobert-base-uncased", cuda=True):
     """

@@ -20,7 +20,7 @@ try:
 except ImportError:
     print("Please install required packages: pip install ptdec ptsdae")
 
-from dataset import CachedBERTDataset
+from FNNJST.dataset import CachedBERTDataset
 
 # This is assuming you have a SummaryWriter for TensorBoard
 try:
