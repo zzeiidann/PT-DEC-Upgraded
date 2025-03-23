@@ -84,7 +84,7 @@ class FNNJST:
         )
     
     def train_autoencoder(self, input_params=self.input_encoder_params, output_params=self.output_encoder_params):
-        autoencoder = StackedDenoisingAutoEncoder([self.input_encoder_params, 500, 500, 2000, self.output_encoder_params], final_activation=None)
+        autoencoder = StackedDenoisingAutoEncoder([input_params, 500, 500, 2000, output_params], final_activation=None)
         if torch.cuda.is_available() and self.cuda:
             autoencoder.cuda()
         
