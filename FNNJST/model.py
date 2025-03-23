@@ -216,7 +216,7 @@ class FNNJST:
         print(f"Dataset split into {len(train_indices)} training samples and {len(val_indices)} validation samples (stratified)")
         return self.train_loader, self.val_loader
     
-    def train_SENTIMENT(self, learning_rate=self.model_sentiment_learning_rate, num_epochs=self.model_sentiment_epochs, batch_size=self.model_sentiment_batch_size, val_ratio=0.2, dataset=None):
+    def train_SENTIMENT(self, learning_rate=None, num_epochs=None, batch_size=None, val_ratio=0.2, dataset=None):
         """
         Train the sentiment classifier using the autoencoder
         
@@ -230,6 +230,10 @@ class FNNJST:
         Returns:
             training_stats: Dictionary containing training and validation metrics
         """
+
+        learning_rate = learning_rate if learning_rate is not None else self.sentiment_learning_rate
+        num_epochs = num_epochs if num_epochs is not None else self.sentiment_epochs
+        batch_size = batch_size if batch_size is not None else self.sentiment_batch_size
 
         self.model_sentiment = nn.Sequential(
             self.encoder, 
