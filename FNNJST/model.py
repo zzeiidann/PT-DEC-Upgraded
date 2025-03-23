@@ -33,12 +33,10 @@ except ImportError:
     writer = DummyWriter()
 
 class FNNJST:
-    def __init__(
-                self, texts, labels, bert_model, cuda=True, #Bert Representation
+    def __init__(self, texts, labels, bert_model, cuda=True, #Bert Representation
                 encoders_input_params= 768, encoder_output_params = 5, encoder_epochs=100, encoder_batch_size=10, #Encoder Set UP
                 sentiment_epochs=50, sentiment_learning_rate=0.001, sentiment_batch_size=10, #Sentiment Set UP
-                cluster_number=5, hidden_dimension=5, dec_epochs=50, dec_batch_size=10, #DEC Set UP
-                 ):
+                cluster_number=5, hidden_dimension=5, dec_epochs=50, dec_batch_size=10): #DEC Set UP
         self.texts = texts
         self.labels = labels
         self.bert_model = bert_model
