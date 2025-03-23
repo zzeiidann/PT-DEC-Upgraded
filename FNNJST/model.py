@@ -107,7 +107,7 @@ class FNNJST:
             optimizer=lambda model: SGD(model.parameters(), lr=0.01, momentum=0.9),
             scheduler=lambda x: StepLR(x, 100, gamma=0.1),
             corruption=0.2,
-            silent=True
+            # silent=True
         )
 
         print("Training stage.")
@@ -123,7 +123,7 @@ class FNNJST:
             scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
             corruption=0.2,
             update_callback=None, 
-            silent=True
+            # silent=True
         )
 
         self.encoder = autoencoder.encoder
