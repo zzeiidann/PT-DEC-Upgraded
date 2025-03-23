@@ -399,11 +399,9 @@ class FNNJST:
                 inputs = inputs.to(device)
                 labels = labels.long().to(device)
                 
-                # If labels are one-hot encoded
                 if labels.dim() > 1 and labels.shape[1] > 1:
                     labels = torch.argmax(labels, dim=1)
                 
-                # Forward pass through the entire sentiment model
                 outputs = self.model_sentiment(inputs)
                 
                 loss = self.criterion(outputs, labels)
@@ -604,16 +602,16 @@ class FNNJST:
         else:
             print("Training sentiment classifier...")
             self.train_SENTIMENT(
-                learning_rate=4e-5,
-                num_epochs=50,
-                batch_size=batch_size,
-                val_ratio=val_ratio
+                # learning_rate=4e-5,
+                # num_epochs=50,
+                # batch_size=batch_size,
+                # val_ratio=val_ratio
             )
             
             print("Training DEC model...")
             self.train_DEC(
-                cluster_number=cluster_number,
-                hidden_dimension=hidden_dimension,
+                # cluster_number=cluster_number,
+                # hidden_dimension=hidden_dimension,
                 
             )
         
