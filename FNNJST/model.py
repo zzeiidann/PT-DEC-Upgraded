@@ -9,6 +9,7 @@ import pandas as pd
 from collections import Counter
 import copy
 from transformers import AutoTokenizer, AutoModel
+from tqdm.notebook import tqdm
 
 # Import necessary modules that might be missing in your provided code
 # You'll need to install these dependencies
@@ -22,29 +23,45 @@ except ImportError:
 
 from FNNJST.dataset import CachedBERTDataset
 
-# This is assuming you have a SummaryWriter for TensorBoard
 try:
     from torch.utils.tensorboard import SummaryWriter
     writer = SummaryWriter()
 except ImportError:
-    # Create a dummy writer if TensorBoard is not available
     class DummyWriter:
         def add_scalars(self, *args, **kwargs):
             pass
     writer = DummyWriter()
 
 class FNNJST:
-    def __init__(self, texts, labels, bert_model, cuda=True, cluster_number=5, hidden_dimension=10):
+    def __init__(
+                self, texts, labels, bert_model, cuda=True, #Bert Representation
+                encoders_input_params= 768, encoder_output_params = 5, encoder_epochs=100, encoder_batch_size=10, #Encoder Set UP
+                sentiment_epochs=50, sentiment_learning_rate=0.001, sentiment_batch_size=10, #Sentiment Set UP
+                cluster_number=5, hidden_dimension=5, dec_epochs=50, dec_batch_size=10, #DEC Set UP
+                 ):
         self.texts = texts
         self.labels = labels
         self.bert_model = bert_model
         self.cuda = cuda
-        self.cluster_number = cluster_number
-        self.hidden_dimension = hidden_dimension
+  
         self.device = torch.device("cuda" if cuda and torch.cuda.is_available() else "cpu")
         self.model_dec = None 
         self.model_sentiment = None
         self.bert_tokenizer = AutoTokenizer.from_pretrained(self.bert_model)
+
+        self.input_encoder_params = encoders_input_params
+        self.output_encoder_params = encoder_output_params
+        self.encoder_epochs = encoder_epochs
+        self.encoder_batch_size = encoder_batch_size
+
+        self.model_sentiment_epochs = sentiment_epochs
+        self.model_sentiment_learning_rate = sentiment_learning_rate
+        self.model_sentiment_batch_size = sentiment_batch_size
+
+        self.cluster_number = cluster_number
+        self.hidden_dimension = hidden_dimension
+        self.model_dec_epochs = dec_epochs
+        self.model_dec_batch_size = dec_batch_size
 
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = None
@@ -66,8 +83,8 @@ class FNNJST:
             epoch,
         )
     
-    def train_autoencoder(self, input_params=768, output_params=5):
-        autoencoder = StackedDenoisingAutoEncoder([input_params, 500, 500, 2000, output_params], final_activation=None)
+    def train_autoencoder(self, input_params=self.input_encoder_params, output_params=self.output_encoder_params):
+        autoencoder = StackedDenoisingAutoEncoder([self.input_encoder_params, 500, 500, 2000, self.output_encoder_params], final_activation=None)
         if torch.cuda.is_available() and self.cuda:
             autoencoder.cuda()
         
@@ -77,8 +94,8 @@ class FNNJST:
             autoencoder,
             cuda=torch.cuda.is_available() and self.cuda,
             validation=None,
-            epochs=100, 
-            batch_size=10, 
+            epochs=self.encoder_epochs, 
+            batch_size=self.encoder_batch_size, 
             optimizer=lambda model: SGD(model.parameters(), lr=0.01, momentum=0.9),
             scheduler=lambda x: StepLR(x, 100, gamma=0.1),
             corruption=0.2,
@@ -92,8 +109,8 @@ class FNNJST:
             autoencoder,
             cuda=torch.cuda.is_available() and self.cuda,
             validation=None,
-            epochs=100, 
-            batch_size=10,
+            epochs=self.encoder_epochs, 
+            batch_size=self.encoder_batch_size,
             optimizer=ae_optimizer,
             scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
             corruption=0.2,
@@ -138,7 +155,7 @@ class FNNJST:
         print(f"Dataset split into {train_size} training samples and {val_size} validation samples")
         return self.train_loader, self.val_loader
     
-    def prepare_data_stratified(self, dataset, train_ratio=0.8, batch_size=32):
+    def prepare_data_stratified(self, dataset, train_ratio=0.8, batch_size=10):
         """
         Split the dataset into training and validation sets using stratified sampling
         
@@ -186,7 +203,7 @@ class FNNJST:
         print(f"Dataset split into {len(train_indices)} training samples and {len(val_indices)} validation samples (stratified)")
         return self.train_loader, self.val_loader
     
-    def train_SENTIMENT(self, learning_rate=0.001, num_epochs=10, batch_size=32, val_ratio=0.2, dataset=None):
+    def train_SENTIMENT(self, learning_rate=self.model_sentiment_learning_rate, num_epochs=self.model_sentiment_epochs, batch_size=self.model_sentiment_batch_size, val_ratio=0.2, dataset=None):
         """
         Train the sentiment classifier using the autoencoder
         
@@ -200,6 +217,7 @@ class FNNJST:
         Returns:
             training_stats: Dictionary containing training and validation metrics
         """
+
         self.model_sentiment = nn.Sequential(
             self.encoder, 
             self.decoder,
@@ -242,53 +260,57 @@ class FNNJST:
             'val_accuracy': []
         }
         
-        # Training loop for sentiment model
-        for epoch in range(num_epochs):
-            # Training phase
+        epoch_pbar = tqdm(range(num_epochs), desc="Training Epochs", position=0)
+        
+        for epoch in epoch_pbar:
             self.model_sentiment.train()
             
             total_train_loss = 0
+            batch_pbar = tqdm(self.train_loader, desc=f"Epoch {epoch+1}/{num_epochs}", position=1, leave=False)
             
-            for batch in self.train_loader:
-                inputs, labels = batch  # Extract input embeddings & labels
+            for batch in batch_pbar:
+                inputs, labels = batch  
                 inputs = inputs.to(available_devices[0])
                 
-                # Convert labels to long type before sending to device
                 labels = labels.long().to(available_devices[0])
                 
-                # If labels are one-hot encoded, convert to class indices
                 if labels.dim() > 1 and labels.shape[1] > 1:
                     labels = torch.argmax(labels, dim=1)
                     
-                self.optimizer.zero_grad()  # Reset gradients
+                self.optimizer.zero_grad() 
                 
-                # Forward pass through the entire sentiment model (includes encoder and decoder)
                 outputs = self.model_sentiment(inputs)
-                
-                # Compute loss
                 loss = self.criterion(outputs, labels)
                 
-                # Backpropagate
                 loss.backward()
-                
-                # Update weights
                 self.optimizer.step()
                 
-                total_train_loss += loss.item()
+                batch_loss = loss.item()
+                total_train_loss += batch_loss
+                
+                batch_pbar.set_postfix({"batch_loss": f"{batch_loss:.4f}"})
             
             avg_train_loss = total_train_loss / len(self.train_loader)
             training_stats['train_loss'].append(avg_train_loss)
             
-            # Validation phase
+            epoch_stats = {"train_loss": f"{avg_train_loss:.4f}"}
+            
             if self.val_loader is not None:
+                val_pbar = tqdm(desc="Validating", position=1, leave=False, total=1)
                 val_loss, val_accuracy = self._validate_sentiment()
+                val_pbar.update(1)
+                val_pbar.close()
+                
                 training_stats['val_loss'].append(val_loss)
                 training_stats['val_accuracy'].append(val_accuracy)
                 
-                print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {avg_train_loss:.4f}, Val Loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.4f}")
-            else:
-                print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {avg_train_loss:.4f}")
-        
+                epoch_stats.update({
+                    "val_loss": f"{val_loss:.4f}", 
+                    "val_accuracy": f"{val_accuracy:.4f}"
+                })
+            
+            epoch_pbar.set_postfix(epoch_stats)
+            
         print("Sentiment Training complete!")
         return training_stats
     
@@ -308,30 +330,25 @@ class FNNJST:
         if hidden_dimension is None:
             hidden_dimension = self.hidden_dimension
         
-        # Check available GPUs
         available_devices = []
         if torch.cuda.is_available() and self.cuda:
             num_gpus = torch.cuda.device_count()
-            for i in range(min(num_gpus, 2)):  # Use up to 2 GPUs
+            for i in range(min(num_gpus, 2)): 
                 available_devices.append(torch.device(f"cuda:{i}"))
         
         if not available_devices:
-            available_devices = [self.device]  # Fall back to the default device
+            available_devices = [self.device] 
         
-        # Use second GPU if available, otherwise use the same device
         dec_device = available_devices[1] if len(available_devices) > 1 else available_devices[0]
-        
-        # Create a copy of the encoder for DEC (potentially on a different device)
+     
         encoder_copy = copy.deepcopy(self.encoder)
         encoder_copy = encoder_copy.to(dec_device)
         
-        # Initialize DEC model with the encoder copy
         self.model_dec = DEC(cluster_number=cluster_number, hidden_dimension=hidden_dimension, encoder=encoder_copy)
         self.model_dec = self.model_dec.to(dec_device)
         
         dec_optimizer = SGD(self.model_dec.parameters(), lr=0.01, momentum=0.9)
         
-        # Create a data loader specifically for DEC training
         dec_loader = DataLoader(
             self.dataset,
             batch_size=2,
@@ -341,8 +358,8 @@ class FNNJST:
         train(
             dataset=self.dataset,
             model=self.model_dec,
-            epochs=50,
-            batch_size=2,
+            epochs=self.model_dec_epochs,
+            batch_size=self.model_dec_batch_size,
             optimizer=dec_optimizer,
             stopping_delta=0.00000001,
             cuda=True if "cuda" in str(dec_device) else False,
@@ -401,7 +418,6 @@ class FNNJST:
             accuracy: Overall accuracy
             metrics: Dictionary with precision, recall, and f1-score
         """
-        # Use validation set if test_dataset is not provided
         if test_dataset is None and self.val_loader is not None:
             test_loader = self.val_loader
         elif test_dataset is not None:
