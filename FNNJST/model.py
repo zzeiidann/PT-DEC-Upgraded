@@ -11,15 +11,10 @@ import copy
 from transformers import AutoTokenizer, AutoModel
 from tqdm.notebook import tqdm
 
-# Import necessary modules that might be missing in your provided code
-# You'll need to install these dependencies
-try:
-    from ptdec.dec import DEC
-    from ptdec.model import train
-    import ptsdae.model as ae
-    from ptsdae.sdae import StackedDenoisingAutoEncoder
-except ImportError:
-    print("Please install required packages: pip install ptdec ptsdae")
+from ptdec.dec import DEC
+from ptdec.model import train
+import ptsdae.model as ae
+from ptsdae.sdae import StackedDenoisingAutoEncoder
 
 from FNNJST.dataset import CachedBERTDataset
 
