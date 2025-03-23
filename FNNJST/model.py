@@ -83,7 +83,22 @@ class FNNJST:
             epoch,
         )
     
-    def train_autoencoder(self, input_params=self.input_encoder_params, output_params=self.output_encoder_params):
+    def train_autoencoder(self, input_params=None, output_params=None):
+        """
+        Train a stacked denoising autoencoder
+        
+        Args:
+            input_params: Input dimension for the autoencoder (defaults to self.input_encoder_params)
+            output_params: Output dimension for the autoencoder (defaults to self.output_encoder_params)
+        
+        Returns:
+            tuple: (encoder, decoder) parts of the autoencoder
+        """
+        if input_params is None:
+            input_params = self.input_encoder_params
+        if output_params is None:
+            output_params = self.output_encoder_params
+            
         autoencoder = StackedDenoisingAutoEncoder([input_params, 500, 500, 2000, output_params], final_activation=None)
         if torch.cuda.is_available() and self.cuda:
             autoencoder.cuda()
