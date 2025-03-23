@@ -226,9 +226,9 @@ class FNNJST:
             training_stats: Dictionary containing training and validation metrics
         """
 
-        learning_rate = learning_rate if learning_rate is not None else self.sentiment_learning_rate
-        num_epochs = num_epochs if num_epochs is not None else self.sentiment_epochs
-        batch_size = batch_size if batch_size is not None else self.sentiment_batch_size
+        learning_rate = learning_rate if learning_rate is not None else self.model_sentiment_learning_rate
+        num_epochs = num_epochs if num_epochs is not None else self.model_sentiment_epochs
+        batch_size = batch_size if batch_size is not None else self.model_sentiment_batch_size
 
         self.model_sentiment = nn.Sequential(
             self.encoder, 
@@ -326,7 +326,7 @@ class FNNJST:
         print("Sentiment Training complete!")
         return training_stats
     
-    def train_DEC(self, cluster_number=None, hidden_dimension=None):
+    def train_DEC(self, cluster_number=None, hidden_dimension=None, batch_size=None, epochs=None):
         """
         Train the DEC model using the encoder
         
@@ -341,6 +341,10 @@ class FNNJST:
             cluster_number = self.cluster_number
         if hidden_dimension is None:
             hidden_dimension = self.hidden_dimension
+        if batch_size is None:
+            batch_size = self.model_dec_batch_size
+        if epochs is None:
+            epochs = self.model_dec_epochs
         
         available_devices = []
         if torch.cuda.is_available() and self.cuda:
