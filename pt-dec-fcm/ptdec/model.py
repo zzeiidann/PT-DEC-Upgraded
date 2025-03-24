@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn_extra.cluster import KMedoids
+from fcmeans import FCM
 import torch
 import torch.nn as nn
 from torch.utils.data.dataloader import DataLoader, default_collate
@@ -72,29 +72,29 @@ def train(
         },
         disable=silent,
     )
-    kmedoids = KMedoids(n_clusters=model.cluster_number, method="pam")
+    fcm = FCM(n_clusters=model.cluster_number)
     model.train()
     features = []
     actual = []
     # form initial cluster centres
     for index, batch in enumerate(data_iterator):
         if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-            batch, value = batch  # if we have a prediction label, separate it to actual
+            batch, value = batch  
             actual.append(value)
         if cuda:
             batch = batch.cuda(non_blocking=True)
         features.append(model.encoder(batch).detach().cpu())
     actual = torch.cat(actual).long()
-    predicted = kmedoids.fit_predict(torch.cat(features).numpy())
+    fcm.fit(torch.cat(features).numpy())
+    predicted = fcm.predict(torch.cat(features).numpy())
     predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
     _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
     cluster_centers = torch.tensor(
-        kmedoids.cluster_centers_, dtype=torch.float, requires_grad=True
+       fcm.centers, dtype=torch.float, requires_grad=True
     )
     if cuda:
         cluster_centers = cluster_centers.cuda(non_blocking=True)
     with torch.no_grad():
-        # initialise the cluster centers
         model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
     loss_function = nn.KLDivLoss(size_average=False)
     delta_label = None
