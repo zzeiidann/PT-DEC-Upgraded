@@ -16,4 +16,6 @@ seaborn>=0.9.0
 pytest>=3.8.0
 pytest-cov>=2.6.0
 codecov>=2.0.15
+fuzzy-c-means==1.7.2
+
 -e git://github.com/vlukiyanov/pt-sdae.git#egg=ptsdae

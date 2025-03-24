@@ -24,6 +24,7 @@ setup(
         "tqdm>=4.11.2",
         "scikit-learn>=0.19.1",
         "ptsdae>=1.0.0",
+        "fuzzy-c-means==1.7.2",
     ],
     packages=["ptdec"],
 )

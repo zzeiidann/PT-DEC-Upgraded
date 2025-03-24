@@ -92,8 +92,6 @@ class FNNJST:
             input_params = self.input_encoder_params
         if output_params is None:
             output_params = self.output_encoder_params
-        if silent_params is None:
-            silent_params = self.silent_encoder_params
 
         autoencoder = StackedDenoisingAutoEncoder([input_params, 500, 500, 2000, output_params], final_activation=None)
         if torch.cuda.is_available() and self.cuda:
