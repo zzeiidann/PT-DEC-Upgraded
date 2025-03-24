@@ -29,7 +29,7 @@ except ImportError:
 
 class FNNJST:
     def __init__(self, texts, labels, bert_model, cuda=True, #Bert Representation
-                encoders_input_params= 768, encoder_output_params = 5, encoder_epochs=100, encoder_batch_size=10, #Encoder Set UP
+                silent_encoder_params = True ,encoders_input_params = 768, encoder_output_params = 5, encoder_epochs=100, encoder_batch_size=10, #Encoder Set UP
                 sentiment_epochs=50, sentiment_learning_rate=0.001, sentiment_batch_size=10, #Sentiment Set UP
                 cluster_number=5, hidden_dimension=5, dec_epochs=50, dec_batch_size=10): #DEC Set UP
         self.texts = texts
@@ -46,6 +46,7 @@ class FNNJST:
         self.output_encoder_params = encoder_output_params
         self.encoder_epochs = encoder_epochs
         self.encoder_batch_size = encoder_batch_size
+        self.silent_encoder_params = silent_encoder_params
 
         self.model_sentiment_epochs = sentiment_epochs
         self.model_sentiment_learning_rate = sentiment_learning_rate
@@ -91,7 +92,9 @@ class FNNJST:
             input_params = self.input_encoder_params
         if output_params is None:
             output_params = self.output_encoder_params
-            
+        if silent_params is None:
+            silent_params = self.silent_encoder_params
+
         autoencoder = StackedDenoisingAutoEncoder([input_params, 500, 500, 2000, output_params], final_activation=None)
         if torch.cuda.is_available() and self.cuda:
             autoencoder.cuda()
@@ -107,7 +110,7 @@ class FNNJST:
             optimizer=lambda model: SGD(model.parameters(), lr=0.01, momentum=0.9),
             scheduler=lambda x: StepLR(x, 100, gamma=0.1),
             corruption=0.2,
-            # silent=True
+            silent=self.silent_encoder_params
         )
 
         print("Training stage.")
@@ -123,7 +126,7 @@ class FNNJST:
             scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
             corruption=0.2,
             update_callback=None, 
-            # silent=True
+            silent=self.silent_encoder_params
         )
 
         self.encoder = autoencoder.encoder
