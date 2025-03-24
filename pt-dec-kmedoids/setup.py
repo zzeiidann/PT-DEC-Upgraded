@@ -13,7 +13,7 @@ setup(
     setup_requires=["pytest-runner"],
     tests_require=["pytest"],
     install_requires=[
-        "numpy==1.21.6",
+        "numpy>=1.13.3",
         "torch>=0.4.0",
         "scipy>=1.0.0",
         "pandas>=0.21.0",
@@ -24,7 +24,6 @@ setup(
         "tqdm>=4.11.2",
         "scikit-learn>=0.19.1",
         "ptsdae>=1.0.0",
-        "scikit-learn-extra==0.3.0" 
     ],
     packages=["ptdec"],
 )
