@@ -13,7 +13,7 @@ setup(
     setup_requires=["pytest-runner"],
     tests_require=["pytest"],
     install_requires=[
-        "numpy>=1.13.3",
+        "numpy==1.21.6",
         "torch>=0.4.0",
         "scipy>=1.0.0",
         "pandas>=0.21.0",
