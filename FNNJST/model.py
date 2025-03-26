@@ -527,10 +527,18 @@ class FNNJST:
         
         with torch.no_grad():
             sentiment_inputs = embeddings_tensor.to(sentiment_device)
+            sentiment_inputs =  ae.predict(sentiment_inputs, 
+                                           self.decoder,
+                                           silent=True
+                                           )
             sentiment_outputs = self.model_sentiment(sentiment_inputs)
             sentiment_probs, sentiment_preds = F.softmax(sentiment_outputs, dim=1).max(dim=1)
             
             dec_inputs = embeddings_tensor.to(dec_device)
+            dec_inputs =  ae.predict(dec_inputs,
+                                        self.encoder,
+                                        silent=True
+                                        )
             cluster_outputs = self.model_dec(dec_inputs)
             cluster_preds = cluster_outputs.argmax(dim=1)
         
@@ -607,17 +615,10 @@ class FNNJST:
         else:
             print("Training sentiment classifier...")
             self.train_SENTIMENT(
-                # learning_rate=4e-5,
-                # num_epochs=50,
-                # batch_size=batch_size,
-                # val_ratio=val_ratio
             )
             
             print("Training DEC model...")
             self.train_DEC(
-                # cluster_number=cluster_number,
-                # hidden_dimension=hidden_dimension,
-                
             )
         
         print("Multi-task training complete!")
@@ -698,7 +699,6 @@ class FNNJST:
             for cluster, words in cluster_words.items()
         ]).sort_values(by=['Cluster']).reset_index(drop=True)
         
-        print("\n============== CLUSTER ANALYSIS ==============")
         print(df_clusters)
         
         return df_clusters
