@@ -232,13 +232,18 @@ class FNNJST:
         batch_size = batch_size if batch_size is not None else self.model_sentiment_batch_size
 
         self.model_sentiment = nn.Sequential(
-            self.encoder, 
-            self.decoder,
-            nn.Linear(768, 100),     
-            nn.ReLU(),
-            nn.Linear(100, 2),
-            nn.Softmax(dim=1)      
+            nn.Linear(768, 128),
+            nn.BatchNorm1d(128),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, 32),
+            nn.BatchNorm1d(32),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(32, 2)
         )
+
+
         
         available_devices = []
         if torch.cuda.is_available() and self.cuda:
