@@ -491,11 +491,117 @@ class FNNJST:
         
         return accuracy, metrics
     
+    # def predict(self, inputs):
+    #     if isinstance(inputs, str):
+    #         inputs = [inputs]
+    
+    #     if isinstance(inputs, list) and isinstance(inputs[0], str):
+    #         tokens = self.bert_tokenizer(
+    #             inputs,
+    #             padding=True,
+    #             truncation=True,
+    #             return_tensors="pt",
+    #             max_length=512
+    #         ).to(self.device)
+    
+    #         with torch.no_grad():
+    #             if not callable(self.bert_model):
+    #                 from transformers import AutoModel
+    #                 self.bert_model = AutoModel.from_pretrained(self.bert_model if isinstance(self.bert_model, str) else "indolem/indobert-base-uncased")
+    #                 self.bert_model.to(self.device)
+                
+    #             outputs = self.bert_model(**tokens)
+            
+    #         embeddings_tensor = outputs.last_hidden_state[:, 0, :]
+    
+    #     elif isinstance(inputs, torch.Tensor):
+    #         embeddings_tensor = inputs
+    #     else:
+    #         raise ValueError("Input must be a list of texts or embeddings tensor")
+    
+    #     sentiment_device = next(self.model_sentiment.parameters()).device
+    #     dec_device = next(self.model_dec.parameters()).device
+        
+    #     self.model_sentiment.eval()
+    #     self.model_dec.eval()
+        
+    #     with torch.no_grad():
+    #         sentiment_inputs = embeddings_tensor.to(sentiment_device)
+    #         sentiment_outputs = self.model_sentiment(sentiment_inputs)
+    #         sentiment_probs, sentiment_preds = F.softmax(sentiment_outputs, dim=1).max(dim=1)
+            
+    #         dec_inputs = embeddings_tensor.to(dec_device)
+    #         cluster_outputs = self.model_dec(dec_inputs)
+    #         cluster_preds = cluster_outputs.argmax(dim=1)
+        
+    #     sentiment_predictions = sentiment_preds.cpu().numpy()
+    #     sentiment_probabilities = sentiment_probs.cpu().numpy()
+    #     cluster_predictions = cluster_preds.cpu().numpy()
+        
+    #     results = []
+    #     for i in range(len(sentiment_predictions)):
+    #         sentiment_label = self.class_labels[sentiment_predictions[i]]
+    #         result = {
+    #             'sentiment': sentiment_label,
+    #             'sentiment_probability': float(sentiment_probabilities[i]),
+    #             'cluster': int(cluster_predictions[i])
+    #         }
+    #         if isinstance(inputs, list) and isinstance(inputs[0], str):
+    #             result['text'] = inputs[i]
+    #         results.append(result)
+        
+    #     return results
+
+    def get_encoded_representations(self, dataset=None, batch_size=32, cuda=None):
+        """
+        Generate encoded representations using the trained autoencoder
+        
+        Args:
+            dataset: Dataset to encode (defaults to self.dataset)
+            batch_size: Batch size for encoding
+            cuda: Whether to use CUDA (defaults to self.cuda)
+            
+        Returns:
+            torch.Tensor: Encoded representations
+        """
+        if dataset is None:
+            dataset = self.dataset
+        
+        if cuda is None:
+            cuda = self.cuda
+        
+        if self.encoder is None:
+            raise ValueError("Encoder has not been trained yet. Train autoencoder first.")
+        
+        # Use the ae.predict function with encode=True to use just the encoder part
+        encoded_features = ae.predict(
+            dataset=dataset,
+            model=self.encoder,  # Using just the encoder part
+            batch_size=batch_size,
+            cuda=cuda and torch.cuda.is_available(),
+            silent=self.silent_encoder_params,
+            encode=True  # Make sure we're encoding
+        )
+        
+        return encoded_features
+
     def predict(self, inputs):
+        """
+        Predict sentiment and cluster using encoded representations
+        
+        Args:
+            inputs: Input texts or embeddings tensor
+            
+        Returns:
+            List of dictionaries with sentiment and cluster predictions
+        """
         if isinstance(inputs, str):
             inputs = [inputs]
-    
+        
         if isinstance(inputs, list) and isinstance(inputs[0], str):
+            # Create a temporary dataset for the input texts
+            from torch.utils.data import TensorDataset
+            
             tokens = self.bert_tokenizer(
                 inputs,
                 padding=True,
@@ -503,22 +609,28 @@ class FNNJST:
                 return_tensors="pt",
                 max_length=512
             ).to(self.device)
-    
+        
             with torch.no_grad():
                 if not callable(self.bert_model):
                     from transformers import AutoModel
                     self.bert_model = AutoModel.from_pretrained(self.bert_model if isinstance(self.bert_model, str) else "indolem/indobert-base-uncased")
                     self.bert_model.to(self.device)
-                
+                    
                 outputs = self.bert_model(**tokens)
-            
+                
+            # Get the embeddings from the [CLS] token
             embeddings_tensor = outputs.last_hidden_state[:, 0, :]
-    
+            
+            # Create a temporary dataset
+            temp_dataset = TensorDataset(embeddings_tensor)
+            
         elif isinstance(inputs, torch.Tensor):
             embeddings_tensor = inputs
+            temp_dataset = TensorDataset(embeddings_tensor)
         else:
             raise ValueError("Input must be a list of texts or embeddings tensor")
-    
+        
+        # Get device information for both models
         sentiment_device = next(self.model_sentiment.parameters()).device
         dec_device = next(self.model_dec.parameters()).device
         
@@ -526,11 +638,14 @@ class FNNJST:
         self.model_dec.eval()
         
         with torch.no_grad():
+            # For sentiment, use the full embeddings
             sentiment_inputs = embeddings_tensor.to(sentiment_device)
             sentiment_outputs = self.model_sentiment(sentiment_inputs)
             sentiment_probs, sentiment_preds = F.softmax(sentiment_outputs, dim=1).max(dim=1)
             
-            dec_inputs = embeddings_tensor.to(dec_device)
+            # For clustering, use the encoded representations
+            encoded_features = self.get_encoded_representations(temp_dataset, batch_size=len(inputs))
+            dec_inputs = encoded_features.to(dec_device)
             cluster_outputs = self.model_dec(dec_inputs)
             cluster_preds = cluster_outputs.argmax(dim=1)
         
@@ -551,7 +666,7 @@ class FNNJST:
             results.append(result)
         
         return results
-        
+    
     def train_multi_task(self, learning_rate=0.001, sentiment_epochs=20, dec_epochs=50, batch_size=2, val_ratio=0.2, cluster_number=None, hidden_dimension=None):
         """
         Train both sentiment and DEC models in parallel if multiple GPUs are available,
