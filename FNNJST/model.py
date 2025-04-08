@@ -552,7 +552,7 @@ class FNNJST:
         
     #     return results
 
-    def get_encoded_representations(self, dataset=None, cuda=None):
+    def get_encoded_representations(self, dataset=None, batch_size=32, cuda=None):
         """
         Generate encoded representations using the trained encoder
         
@@ -575,7 +575,7 @@ class FNNJST:
         
         # Create a dataloader for the dataset
         dataloader = DataLoader(
-            dataset, batch_size=self.encoder_batch_size, pin_memory=False, shuffle=False
+            dataset, batch_size=batch_size, pin_memory=False, shuffle=False
         )
         
         data_iterator = tqdm(dataloader, leave=False, unit="batch", disable=self.silent_encoder_params)
