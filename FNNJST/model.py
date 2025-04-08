@@ -706,7 +706,7 @@ class FNNJST:
         
         with torch.no_grad():
             # For sentiment, use the full embeddings
-            decoded_features = self.get_encoded_representations2(temp_dataset, batch_size=len(inputs))
+            decoded_features = self.get_encoded_representation2(temp_dataset, batch_size=len(inputs))
             sentiment_inputs = decoded_features.to(sentiment_device)
             sentiment_outputs = self.model_sentiment(sentiment_inputs)
             sentiment_probs, sentiment_preds = F.softmax(sentiment_outputs, dim=1).max(dim=1)
