@@ -602,6 +602,56 @@ class FNNJST:
         # Concatenate all batches
         return torch.cat(features)
 
+    def get_encoded_representation2(self, dataset=None, batch_size=1, cuda=None):
+        """
+        Generate encoded representations using the trained encoder
+        
+        Args:
+            dataset: Dataset to encode (defaults to self.dataset)
+            batch_size: Batch size for encoding
+            cuda: Whether to use CUDA (defaults to self.cuda)
+            
+        Returns:
+            torch.Tensor: Encoded representations
+        """
+        if dataset is None:
+            dataset = self.dataset
+        
+        if cuda is None:
+            cuda = self.cuda
+        
+        if self.encoder is None:
+            raise ValueError("Encoder has not been trained yet. Train autoencoder first.")
+        
+        # Create a dataloader for the dataset
+        dataloader = DataLoader(
+            dataset, batch_size=batch_size, pin_memory=False, shuffle=False
+        )
+        
+        data_iterator = tqdm(dataloader, leave=False, unit="batch", disable=self.silent_encoder_params)
+        features = []
+        
+        # Set the encoder to evaluation mode
+        self.decoder.eval()
+        
+        # Process each batch
+        with torch.no_grad():
+            for batch in data_iterator:
+                if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:
+                    batch = batch[0]
+                
+                if cuda and torch.cuda.is_available():
+                    batch = batch.cuda(non_blocking=True)
+                
+                # Pass the batch through the encoder
+                encoded = self.encoder(batch)
+                
+                # Move to CPU to prevent GPU memory overflow
+                features.append(encoded.detach().cpu())
+        
+        # Concatenate all batches
+        return torch.cat(features)
+    
     def predict(self, inputs):
         """
         Predict sentiment and cluster using encoded representations
@@ -656,7 +706,8 @@ class FNNJST:
         
         with torch.no_grad():
             # For sentiment, use the full embeddings
-            sentiment_inputs = embeddings_tensor.to(sentiment_device)
+            decoded_features = self.get_encoded_representations2(temp_dataset, batch_size=len(inputs))
+            sentiment_inputs = decoded_features.to(sentiment_device)
             sentiment_outputs = self.model_sentiment(sentiment_inputs)
             sentiment_probs, sentiment_preds = F.softmax(sentiment_outputs, dim=1).max(dim=1)
             
