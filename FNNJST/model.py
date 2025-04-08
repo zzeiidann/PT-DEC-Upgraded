@@ -552,7 +552,7 @@ class FNNJST:
         
     #     return results
 
-    def get_encoded_representations(self, dataset=None, batch_size=32, cuda=None):
+    def get_encoded_representations(self, dataset=None, batch_size=1, cuda=None):
         """
         Generate encoded representations using the trained encoder
         
@@ -660,7 +660,6 @@ class FNNJST:
             sentiment_outputs = self.model_sentiment(sentiment_inputs)
             sentiment_probs, sentiment_preds = F.softmax(sentiment_outputs, dim=1).max(dim=1)
             
-            # For clustering, use the encoded representations
             encoded_features = self.get_encoded_representations(temp_dataset, batch_size=len(inputs))
             dec_inputs = encoded_features.to(dec_device)
             cluster_outputs = self.model_dec(dec_inputs)
