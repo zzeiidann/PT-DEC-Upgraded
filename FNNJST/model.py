@@ -644,7 +644,7 @@ class FNNJST:
                     batch = batch.cuda(non_blocking=True)
                 
                 # Pass the batch through the encoder
-                encoded = self.encoder(batch)
+                encoded = self.decoder(batch)
                 
                 # Move to CPU to prevent GPU memory overflow
                 features.append(encoded.detach().cpu())
