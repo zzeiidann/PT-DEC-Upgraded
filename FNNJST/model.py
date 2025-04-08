@@ -552,9 +552,9 @@ class FNNJST:
         
     #     return results
 
-    def get_encoded_representations(self, dataset=None, batch_size=32, cuda=None):
+    def get_encoded_representations(self, dataset=None, cuda=None):
         """
-        Generate encoded representations using the trained autoencoder
+        Generate encoded representations using the trained encoder
         
         Args:
             dataset: Dataset to encode (defaults to self.dataset)
@@ -573,17 +573,34 @@ class FNNJST:
         if self.encoder is None:
             raise ValueError("Encoder has not been trained yet. Train autoencoder first.")
         
-        # Use the ae.predict function with encode=True to use just the encoder part
-        encoded_features = ae.predict(
-            dataset=dataset,
-            model=self.encoder,  # Using just the encoder part
-            batch_size=batch_size,
-            cuda=cuda and torch.cuda.is_available(),
-            silent=self.silent_encoder_params,
-            encode=True  # Make sure we're encoding
+        # Create a dataloader for the dataset
+        dataloader = DataLoader(
+            dataset, batch_size=self.encoder_batch_size, pin_memory=False, shuffle=False
         )
         
-        return encoded_features
+        data_iterator = tqdm(dataloader, leave=False, unit="batch", disable=self.silent_encoder_params)
+        features = []
+        
+        # Set the encoder to evaluation mode
+        self.encoder.eval()
+        
+        # Process each batch
+        with torch.no_grad():
+            for batch in data_iterator:
+                if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:
+                    batch = batch[0]
+                
+                if cuda and torch.cuda.is_available():
+                    batch = batch.cuda(non_blocking=True)
+                
+                # Pass the batch through the encoder
+                encoded = self.encoder(batch)
+                
+                # Move to CPU to prevent GPU memory overflow
+                features.append(encoded.detach().cpu())
+        
+        # Concatenate all batches
+        return torch.cat(features)
 
     def predict(self, inputs):
         """
