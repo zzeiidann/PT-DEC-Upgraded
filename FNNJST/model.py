@@ -653,6 +653,28 @@ class FNNJST:
                 
         return np.array(cluster_assignments)
 
+    def set_stop_words(self, stop_words):
+        """
+        Set custom stopwords for cluster text analysis
+        
+        Args:
+            stop_words: List or set of stopwords to use when analyzing text clusters
+            
+        Returns:
+            self: For method chaining
+        """
+        if isinstance(stop_words, list):
+            self.stop_words = set(stop_words)
+        elif isinstance(stop_words, set):
+            self.stop_words = stop_words
+        else:
+            try:
+                self.stop_words = set(stop_words)
+            except:
+                raise ValueError("stop_words must be a list, set, or convertible to a set")
+        
+        return self
+
     def map_texts_to_clusters(self, texts, cluster_assignments):
         clusters = {}
         
@@ -670,7 +692,7 @@ class FNNJST:
             
             words = all_text.lower().split()
             
-            stopwords = set(['dan', 'yang', 'adalah', 'dari', 'dengan', 'untuk', 'ini', 'itu', 'pada', 'the', 'a', 'an', 'is', 'of', 'in', 'to', 'and'])
+            stopwords = getattr(self, 'stop_words', set())
             filtered_words = [word for word in words if word not in stopwords and len(word) > 2]
             
             word_counts = Counter(filtered_words)
@@ -679,7 +701,7 @@ class FNNJST:
             cluster_common_words[cluster] = top_words
         
         return clusters, cluster_common_words
-
+    
     def analyze_clusters(self, model_dec=None, dataset=None, texts=None, cuda=True):
         if model_dec is None:
             model_dec = self.model_dec
