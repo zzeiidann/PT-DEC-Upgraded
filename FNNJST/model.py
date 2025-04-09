@@ -726,8 +726,8 @@ class FNNJST:
         """
         Load all model weights from a single file directly
         """
-        # Load using torch.load
-        checkpoint = torch.load(path, map_location=self.device)
+        # Load using torch.load with weights_only=False for PyTorch 2.6 compatibility
+        checkpoint = torch.load(path, map_location=self.device, weights_only=False)
         
         # Restore everything from the checkpoint
         self.model_sentiment = checkpoint.get('sentiment_model')
