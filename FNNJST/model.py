@@ -30,7 +30,7 @@ except ImportError:
 class FNNJST:
     def __init__(self, texts, labels, bert_model, cuda=True, #Bert Representation
                 silent_encoder_params = True ,encoders_input_params = 768, encoder_output_params = 5, encoder_epochs=100, encoder_batch_size=10, #Encoder Set UP
-                sentiment_epochs=50, sentiment_learning_rate=0.001, sentiment_batch_size=10, #Sentiment Set UP
+                sentiment_epochs=50, sentiment_learning_rate=0.001, sentiment_batch_size=10, model_sentiment=None, #Sentiment Set UP
                 cluster_number=5, hidden_dimension=5, dec_epochs=50, dec_batch_size=10): #DEC Set UP
         self.texts = texts
         self.labels = labels
@@ -39,7 +39,7 @@ class FNNJST:
   
         self.device = torch.device("cuda" if cuda and torch.cuda.is_available() else "cpu")
         self.model_dec = None 
-        self.model_sentiment = None
+        self.model_sentiment = model_sentiment
         self.bert_tokenizer = AutoTokenizer.from_pretrained(self.bert_model)
 
         self.input_encoder_params = encoders_input_params
@@ -231,20 +231,20 @@ class FNNJST:
         num_epochs = num_epochs if num_epochs is not None else self.model_sentiment_epochs
         batch_size = batch_size if batch_size is not None else self.model_sentiment_batch_size
 
-        self.model_sentiment = nn.Sequential(
-            nn.Linear(768, 128),
-            nn.BatchNorm1d(128),
-            nn.GELU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 32),
-            nn.BatchNorm1d(32),
-            nn.GELU(),
-            nn.Dropout(0.3),
-            nn.Linear(32, 2)
-        )
+        if self.model_sentiment is None:
+            self.model_sentiment = nn.Sequential(
+                nn.Linear(768, 128),
+                nn.BatchNorm1d(128),
+                nn.GELU(),
+                nn.Dropout(0.4),
+                nn.Linear(128, 32),
+                nn.BatchNorm1d(32),
+                nn.GELU(),
+                nn.Dropout(0.4),
+                nn.Linear(32, 2)
+            )
 
 
-        
         available_devices = []
         if torch.cuda.is_available() and self.cuda:
             num_gpus = torch.cuda.device_count()
