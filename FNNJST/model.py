@@ -680,6 +680,27 @@ class FNNJST:
         
         return clusters, cluster_common_words
 
+    def analyze_clusters(self, model_dec=None, dataset=None, texts=None, cuda=True):
+        if model_dec is None:
+            model_dec = self.model_dec
+        if dataset is None:
+            dataset = self.dataset
+        if texts is None:
+            texts = self.texts
+            
+        cluster_assignments = self.get_cluster_assignments(model_dec, dataset, cuda=cuda)
+        text_clusters, cluster_words = self.map_texts_to_clusters(texts, cluster_assignments)
+    
+        df_clusters = pd.DataFrame([
+            {"Cluster": cluster, "Common Words": ", ".join([f"{word} ({count})" for word, count in words[:10]])}
+            for cluster, words in cluster_words.items()
+        ]).sort_values(by=['Cluster']).reset_index(drop=True)
+        
+        print("\n============== CLUSTER ANALYSIS ==============")
+        print(df_clusters)
+        
+        return df_clusters
+
     def save_model(self, path="model.pt"):
         """
         Save all model weights in a single file directly
@@ -731,23 +752,6 @@ class FNNJST:
         
         print(f"Model loaded from {path}")
 
-    def analyze_clusters(self, model_dec=None, dataset=None, texts=None, cuda=True):
-        if model_dec is None:
-            model_dec = self.model_dec
-        if dataset is None:
-            dataset = self.dataset
-        if texts is None:
-            texts = self.texts
-            
-        cluster_assignments = self.get_cluster_assignments(model_dec, dataset, cuda=cuda)
-        text_clusters, cluster_words = self.map_texts_to_clusters(texts, cluster_assignments)
-    
-        df_clusters = pd.DataFrame([
-            {"Cluster": cluster, "Common Words": ", ".join([f"{word} ({count})" for word, count in words[:10]])}
-            for cluster, words in cluster_words.items()
-        ]).sort_values(by=['Cluster']).reset_index(drop=True)
-        
-        print("\n============== CLUSTER ANALYSIS ==============")
-        print(df_clusters)
-        
-        return df_clusters
+def create_model(texts, labels, bert_model="indolem/indobert-base-uncased", cuda=True):
+    """Factory function to create a new FNNJST model instance"""
+    return FNNJST(texts, labels, bert_model, cuda)
