@@ -680,6 +680,57 @@ class FNNJST:
         
         return clusters, cluster_common_words
 
+    def save_model(self, path="model.pt"):
+        """
+        Save all model weights in a single file directly
+        """
+        # Create a dictionary of just the models
+        model_dict = {
+            'sentiment_model': self.model_sentiment,
+            'dec_model': self.model_dec,
+            'encoder': self.encoder,
+            'decoder': self.decoder,
+            'class_labels': self.class_labels,
+            'cluster_number': self.cluster_number,
+            'hidden_dimension': self.hidden_dimension,
+            'input_encoder_params': self.input_encoder_params,
+            'output_encoder_params': self.output_encoder_params
+        }
+        
+        # Save using torch.save - this will be smaller than pickle
+        torch.save(model_dict, path)
+        print(f"Model saved to {path}")
+
+    def load_model(self, path="model.pt"):
+        """
+        Load all model weights from a single file directly
+        """
+        # Load using torch.load
+        checkpoint = torch.load(path, map_location=self.device)
+        
+        # Restore everything from the checkpoint
+        self.model_sentiment = checkpoint.get('sentiment_model')
+        self.model_dec = checkpoint.get('dec_model')
+        self.encoder = checkpoint.get('encoder')
+        self.decoder = checkpoint.get('decoder')
+        self.class_labels = checkpoint.get('class_labels', self.class_labels)
+        self.cluster_number = checkpoint.get('cluster_number', self.cluster_number)
+        self.hidden_dimension = checkpoint.get('hidden_dimension', self.hidden_dimension)
+        self.input_encoder_params = checkpoint.get('input_encoder_params', self.input_encoder_params)
+        self.output_encoder_params = checkpoint.get('output_encoder_params', self.output_encoder_params)
+        
+        # Move models to correct device if needed
+        if self.model_sentiment is not None:
+            self.model_sentiment = self.model_sentiment.to(self.device)
+        if self.model_dec is not None:
+            self.model_dec = self.model_dec.to(self.device)
+        if self.encoder is not None:
+            self.encoder = self.encoder.to(self.device)
+        if self.decoder is not None:
+            self.decoder = self.decoder.to(self.device)
+        
+        print(f"Model loaded from {path}")
+
     def analyze_clusters(self, model_dec=None, dataset=None, texts=None, cuda=True):
         if model_dec is None:
             model_dec = self.model_dec
@@ -700,8 +751,3 @@ class FNNJST:
         print(df_clusters)
         
         return df_clusters
-
-# Here we'll add a convenient model factory function
-def create_model(texts, labels, bert_model="indolem/indobert-base-uncased", cuda=True):
-    """Factory function to create a new FNNJST model instance"""
-    return FNNJST(texts, labels, bert_model, cuda)
